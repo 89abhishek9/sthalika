@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "rooms": {
+      "title": "Room",
+      "description": "Details of a stay unit",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "price": { "type": "number" },
+        "image": { "type": "string" },
+        "capacity": { "type": "number" }
+      },
+      "required": ["name", "price", "capacity"]
+    },
+    "bookings": {
+      "title": "Booking",
+      "description": "A reservation made by a guest",
+      "type": "object",
+      "properties": {
+        "roomId": { "type": "string" },
+        "roomName": { "type": "string" },
+        "checkIn": { "type": "string", "format": "date-time" },
+        "checkOut": { "type": "string", "format": "date-time" },
+        "guestName": { "type": "string" },
+        "guestEmail": { "type": "string" },
+        "guests": { "type": "number" },
+        "roomsCount": { "type": "number" },
+        "totalPrice": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "cancelled"] },
+        "userId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["roomId", "checkIn", "checkOut", "guestName", "guestEmail", "guests", "roomsCount", "totalPrice", "status"]
+    }
+  },
+  "firestore": {
+    "/rooms/{roomId}": {
+      "schema": "rooms",
+      "description": "Available stay options"
+    },
+    "/bookings/{bookingId}": {
+      "schema": "bookings",
+      "description": "Guest reservations"
+    }
+  }
+}

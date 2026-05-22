@@ -1,0 +1,6 @@
+{
+  "name": "STHALIKA – Abode of Serenity",
+  "description": "A premium luxury glamping and boutique mountain retreat in Chakrata, Uttarakhand, offering an immersive escape into Himalayan stillness.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

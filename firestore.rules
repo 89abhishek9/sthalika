@@ -1,0 +1,83 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function emailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // --- Entity Validations ---
+
+    function isValidBooking(data) {
+      return data.keys().hasAll(['roomId', 'roomName', 'checkIn', 'checkOut', 'guestName', 'guestEmail', 'guests', 'totalPrice', 'status', 'userId', 'createdAt'])
+        && (data.keys().size() == 11 || (data.keys().size() == 12 && data.keys().hasAll(['roomsCount'])))
+        && data.roomId is string && data.roomId.size() <= 128
+        && data.roomName is string && data.roomName.size() <= 100
+        && data.checkIn is string && data.checkIn.size() <= 50 // ISO string
+        && data.checkOut is string && data.checkOut.size() <= 50
+        && data.guestName is string && data.guestName.size() >= 2 && data.guestName.size() <= 100
+        && data.guestEmail is string && data.guestEmail.size() <= 100
+        && data.guests is number && data.guests >= 1 && data.guests <= 10
+        && (!data.keys().hasAll(['roomsCount']) || (data.roomsCount is number && data.roomsCount >= 1 && data.roomsCount <= 10))
+        && data.totalPrice is number && data.totalPrice >= 0
+        && data.status in ['pending', 'confirmed', 'cancelled']
+        && data.createdAt is string;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && emailVerified() && request.auth.token.email == 'hosting1356@gmail.com';
+    }
+
+    // --- Collection Rules ---
+
+    match /rooms/{roomId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /bookings/{bookingId} {
+      allow create: if isSignedIn() 
+        && emailVerified()
+        && isValidBooking(incoming())
+        && incoming().status == 'pending'
+        && incoming().userId == request.auth.uid;
+      
+      allow get: if isSignedIn() && (isOwner(existing().userId) || isAdmin());
+      
+      allow list: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+
+      allow update: if isSignedIn() && (
+        (isOwner(existing().userId) && isValidBooking(incoming()) && incoming().userId == request.auth.uid && incoming().status == 'cancelled' && existing().status == 'pending' && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+        ||
+        (isAdmin() && isValidBooking(incoming()) && incoming().diff(existing()).affectedKeys().hasOnly(['status']))
+      );
+      
+      allow delete: if false; // Prefer cancellation
+    }
+  }
+}
